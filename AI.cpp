@@ -46,7 +46,7 @@ bool AI::isMatch(const std::string& wordWithBlanks, const std::string& wordInLis
 	return true;
 }
 
-void AI::updateWordBank(const std::string& guessWord) {
+bool AI::updateWordBank(const std::string& guessWord) {
 
 	std::vector<std::string> updatedList;
 
@@ -60,7 +60,7 @@ void AI::updateWordBank(const std::string& guessWord) {
 
 char AI::makeGuess() {
 
-	if (guessQueue.empty()) {
+	if (guessQueue.empty() || wordBank.empty()) {
 		return '?';
 	}
 	char guess = guessQueue.front();
