@@ -55,7 +55,7 @@ void AI::updateWordBank(const std::string& guessWord) {
 		[guessWord, this](const auto& potentialWord) {
 		return isMatch(guessWord, potentialWord);});
 
-	std::swap(wordBank, updatedList);
+	wordBank.swap(updatedList);
 }
 
 char AI::makeGuess() {
@@ -63,10 +63,8 @@ char AI::makeGuess() {
 	if (guessQueue.empty()) {
 		return '?';
 	}
-
-	auto freq = getCharFreqency(wordBank);
-
 	char guess = guessQueue.front();
+	used.push_back(guess);
 	guessQueue.pop();
 	return guess;
 }
@@ -91,4 +89,30 @@ std::vector<std::pair<char, int>> AI::getCharFreqency(const std::vector<std::str
 	}
 
 	return frequencies;
+}
+
+void AI::updateGuessOrder(const std::vector<std::string>& wordBank, const std::vector<char>& usedList) {
+
+	auto freq = getCharFreqency(wordBank);
+
+	std::sort(freq.begin(), freq.end(),
+		[](const auto& l, const auto& r) {
+		return l.second > r.second;
+	});
+
+	std::queue<char> updatedOrder;
+
+	for (const auto& pair : freq) {
+
+		auto found = std::find_if(usedList.begin(), usedList.end(),
+			[pair](const auto& usedChar) {
+			return usedChar == pair.first; });
+
+		if (found == usedList.end()) {
+			updatedOrder.push(pair.first);
+		}
+	}
+
+	guessQueue.swap(updatedOrder);
+
 }
