@@ -5,7 +5,7 @@
 
 
 int main() {
-
+	
 	int wordSize = 0;
 	std::cout << "Enter length of word: ";
 	std::cin >> wordSize;
@@ -43,20 +43,28 @@ int main() {
 			std::string positions;
 			std::cout << "Enter the positions that the letters occur at separate by a comma. (1, 2, 3, 4): ";
 			std::getline(std::cin, positions);
-
 			std::string updatedWord = game.getUpdatedWord(letter, positions);
-			computer.calculateNextMove(updatedWord);
+			computer.setMatches(updatedWord);
 		}
+		else {
+			computer.truncateList();
+		}
+
+		computer.updateGuessOrder();
+
 
 		if (!game.hasTries()) {
 
 		}
 
 		if (game.hasGuessedWord()) {
-
+			std::cout << "Computer has guess you word. It's ";
+			game.displayProgres();
+			std::cout << '\n';
 		}
 	}
 
 	
-
+	std::cout << "Press any button to exit....";
+	std::cin.get();
 }

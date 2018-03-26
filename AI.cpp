@@ -2,27 +2,33 @@
 #include <fstream>
 #include <algorithm>
 #include <iterator>
+#include <regex>
 
 
-AI::AI(int wordSize, std::string guessOrder, std::string filePath)
+AI::AI(int wordSize, std::string filePath)
 {
-
 	std::ifstream file(filePath);
 
 	if (file) {
 		std::istream_iterator<std::string> start(file), end;
-		std::copy_if( start, end,
-			std::back_inserter(wordBank), 
+		std::copy_if(start, end,
+			std::back_inserter(wordBank),
 			[wordSize](const auto& word) {
 			return word.size() == wordSize; }
 		);
 	}
 
-	for (const auto& letter : guessOrder) {
-		guessQueue.push(letter);
+	auto freq = getCharFreqency();
+
+	std::sort(freq.begin(), freq.end(),
+		[](const auto& l, const auto& r) {
+		return l.second > r.second;
+	});
+
+	for (const auto& pair : freq) {
+		guessQueue.push(pair.first);
 	}
 
-	
 }
 
 bool AI::isMatch(const std::string& wordWithBlanks, const std::string& wordInList) {
@@ -46,14 +52,21 @@ bool AI::isMatch(const std::string& wordWithBlanks, const std::string& wordInLis
 	return true;
 }
 
-void AI::updateWordBank(const std::string& guessWord) {
+void AI::setMatches(const std::string& guessWord) {
 
+	std::string pattern;
+	std::transform(guessWord.begin(), guessWord.end(),
+		std::back_inserter(pattern),
+		[guessWord](const auto& letter) {
+		return (letter == '_') ? '.' : letter;
+	});
+
+	std::regex regexp(pattern);
 	std::vector<std::string> updatedList;
-
 	std::copy_if(wordBank.begin(), wordBank.end(), 
 		std::back_inserter(updatedList),
-		[guessWord, this](const auto& potentialWord) {
-		return isMatch(guessWord, potentialWord);});
+		[regexp](const auto& word) {
+		return std::regex_match(word, regexp);});
 
 	wordBank.swap(updatedList);
 }
@@ -69,55 +82,90 @@ char AI::makeGuess() {
 	return guess;
 }
 
-std::vector<std::pair<char, int>> AI::getCharFreqency(const std::vector<std::string>& wordBank) {
+std::vector<std::pair<char, int>> AI::getCharFreqency() {
 
-	std::vector<std::pair<char, int>> frequencies;
-	for (char alpha = 'a'; alpha <= 'z'; alpha++) {
-		frequencies.push_back(std::make_pair(alpha, 0));
-	}
+	std::vector<std::pair<char, int>> f;
 
 	for (const auto& word : wordBank) {
 		for (const auto& letter : word) {
-			auto pair = std::find_if(
-				frequencies.begin(),
-				frequencies.end(),
+
+			auto found = std::find_if(
+				f.begin(), f.end(),
 				[letter](const auto& pair) {
-				return pair.first == letter;
-			});
-			++pair->second;
+				return pair.first == letter; });
+
+			if (found == f.end()) {
+				f.push_back(std::make_pair(letter, 1));
+			}
+			else {
+				++found->second;
+			}
 		}
 	}
 
-	return frequencies;
+	return f;
 }
 
-void AI::updateGuessOrder(const std::vector<std::string>& wordBank, const std::vector<char>& usedList) {
+void AI::updateGuessOrder() {
 
-	auto freq = getCharFreqency(wordBank);
+	auto temp = getCharFreqency();
 
-	std::sort(freq.begin(), freq.end(),
-		[](const auto& l, const auto& r) {
-		return l.second > r.second;
+	std::vector<std::pair<char, int>> freq;
+
+	for (const auto& pair : temp) {
+
+		auto found = std::find_if(used.begin(), used.end(),
+			[pair](char letter) {
+			return pair.first == letter;
+		});
+
+		if (found == used.end()) {
+			freq.push_back(pair);
+
+		}
+	}
+
+	auto allEqualOne = std::all_of(freq.begin(), freq.end(),
+		[](const auto& pair) {
+		return pair.second == 1;
 	});
 
-	std::queue<char> updatedOrder;
+	if (!allEqualOne) {
 
-	for (const auto& pair : freq) {
+		std::sort(freq.begin(), freq.end(),
+			[](const auto& l, const auto& r) {
+			return l.second > r.second;
+		});
 
-		auto found = std::find_if(usedList.begin(), usedList.end(),
-			[pair](const auto& usedChar) {
-			return usedChar == pair.first; });
 
-		if (found == usedList.end()) {
+		std::queue<char> updatedOrder;
+
+		for (const auto& pair : freq) {
 			updatedOrder.push(pair.first);
 		}
+
+		guessQueue.swap(updatedOrder);
 	}
-
-	guessQueue.swap(updatedOrder);
-
 }
 
-void AI::calculateNextMove(std::string updatedWord) {
-	updateWordBank(updatedWord);
-	updateGuessOrder(wordBank, used);
+bool AI::hasGuessedWord() {
+
+	
+
+	return false;
+}
+
+void AI::truncateList() {
+
+char badGuess = used.back();
+
+	std::vector<std::string> updatedList;
+
+	std::copy_if(wordBank.begin(), wordBank.end(),
+		std::back_inserter(updatedList),
+		[badGuess](const auto& word) {
+		return word.find(badGuess) == std::string::npos;
+	});
+
+	wordBank.swap(updatedList);
 }
